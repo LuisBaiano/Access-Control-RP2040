@@ -48,56 +48,64 @@
      // Define as strings a serem exibidas
      const char *line1 = "EMBARCATECH";
      const char *line2 = "PROJETO";
-     const char *line3 = "MONIT. ENCHENTE";
-     const char *line4 = "RTOS";
+     const char *line3 = "PAINEL DE";
+     const char *line4 = "CONTROLE RTOS";
     ssd1306_draw_string(ssd, line1, center_x_approx - (strlen(line1)*8)/2, start_y);
     ssd1306_draw_string(ssd, line2, center_x_approx - (strlen(line2)*8)/2, start_y + line_height);
     ssd1306_draw_string(ssd, line3, center_x_approx - (strlen(line3)*8)/2, start_y + 2*line_height);
     ssd1306_draw_string(ssd, line4, center_x_approx - (strlen(line4)*8)/2, start_y + 3*line_height);
     ssd1306_send_data(ssd);
-    // Mantém a tela visível por um tempo
     sleep_ms(2500);
-    // Limpa o display após a tela de inicialização
     ssd1306_fill(ssd, false);
     ssd1306_send_data(ssd);
 }
 
-void display_update_panel(ssd1306_t *ssd, uint8_t current_users, uint8_t max_users, const char* message) {
+void display_update(ssd1306_t *ssd, uint8_t actual_num_users, uint8_t max_users, const char* frase) {
     if (!ssd) return;
 
-    char count_str[20];
-    char vagas_str[20];
-    char main_msg_str[32];
+    char contagem_str[25];   
+    char vagas_str[20];       
+    char status_str[32];  
 
-    ssd1306_fill(ssd, false); // Limpa buffer
+    ssd1306_fill(ssd, false);
 
-    // Linha 1: Usuários / Capacidade
-    sprintf(count_str, "Usuarios: %u/%u", current_users, max_users);
-    ssd1306_draw_string(ssd, count_str, 2, 5);
+    ssd1306_rect(ssd, 0, 0, DISPLAY_WIDTH -1 , DISPLAY_HEIGHT -1 , true, false);
 
-    // Linha 2: Vagas
-    uint8_t vagas = max_users - current_users;
-    sprintf(vagas_str, "Vagas: %u", vagas);
-    ssd1306_draw_string(ssd, vagas_str, 2, 18);
+    const char* topo = "Ctrle de Acesso";
+    uint8_t titulo = (DISPLAY_WIDTH / 2) - (strlen(topo) * 8 / 2);
+    ssd1306_draw_string(ssd, topo, titulo, 3); 
 
-    // Linha 3: Mensagem de Status/Aviso (se fornecida)
-    if (message && strlen(message) > 0) {
-        strncpy(main_msg_str, message, sizeof(main_msg_str) - 1);
-        main_msg_str[sizeof(main_msg_str) - 1] = '\0'; // Garante terminação nula
+    ssd1306_hline(ssd, 2, DISPLAY_WIDTH - 3, 13, true); 
+
+    sprintf(contagem_str, "Ocupado: %u/%u", actual_num_users, max_users);
+    ssd1306_draw_string(ssd, contagem_str, 5, 19); 
+
+    uint8_t vagas = max_users > actual_num_users ? max_users - actual_num_users : 0;
+    sprintf(vagas_str, "Vagas:   %u", vagas);
+    ssd1306_draw_string(ssd, vagas_str, 5, 28); 
+
+    ssd1306_hline(ssd, 2, DISPLAY_WIDTH - 3, 38, true); 
+
+    if (frase && strlen(frase) > 0) {
+        strncpy(status_str, frase, sizeof(status_str) - 1);
+        status_str[sizeof(status_str) - 1] = '\0';
     } else {
-        // Mensagem padrão baseada na lotação
-        if (current_users == max_users) {
-            strcpy(main_msg_str, "Lotado!");
-        } else if (vagas == 1) {
-            strcpy(main_msg_str, "Ultima Vaga!");
-        } else if (current_users == 0) {
-            strcpy(main_msg_str, "Vazio. Entrada OK");
-        }
-        else {
-            strcpy(main_msg_str, "Entrada OK");
+        if (actual_num_users >= max_users) {
+            strcpy(status_str, "Lotado!");
+        } else if (vagas == 1 && actual_num_users == max_users - 1) {
+            strcpy(status_str, "Ultima Vaga!");
+        } else if (actual_num_users == 0) {
+            strcpy(status_str, "Livre");
+        } else {
+            strcpy(status_str, "Entrada Ok");
         }
     }
-    ssd1306_draw_string(ssd, main_msg_str, 2, 35);
+    uint8_t msg_len = strlen(status_str);
+    uint8_t msg_x = (DISPLAY_WIDTH / 2) - (msg_len * 8 / 2);
+    if (msg_x < 2) msg_x = 2;
+    ssd1306_draw_string(ssd, status_str, msg_x, 45);
 
-    ssd1306_send_data(ssd); // Envia para o display físico
+
+
+    ssd1306_send_data(ssd);
 }
